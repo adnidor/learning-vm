@@ -94,7 +94,7 @@ machine_code = bytearray()
 
 for linenumber, line in enumerate(infile):
     line = line.strip()
-
+    
     if len(line) == 0:
         continue
 

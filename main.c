@@ -305,8 +305,9 @@ int main(int argc, char* argv[]) {
     }
 
     fread(memory, 0xffff, 1, f);
+    fclose(f);
 
-    memory[0xffff] = 0xff;
+    memory[0xffff] = 0xff; //protection agains infinite runs
 
     printf("Starting execution\n");
 
