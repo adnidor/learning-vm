@@ -5,7 +5,7 @@ import struct
 instructions = { "dbg": { "value":0x01, "params":[] },
                  "dmp": { "value":0x02, "params":[] },
                  "hlt": { "value":0x03, "params":[] },
-                 "prm": { "value":0x04, "params":["addr"] },
+                 "prm": { "value":0x04, "params":["reg","reg"] },
                  "pr0": { "value":0x05, "params":[] },
                  "ldc": { "value":0x06, "params":["reg", "byte"] },
                  "ldy": { "value":0x07, "params":["reg", "reg"] },
@@ -59,11 +59,20 @@ for line in infile:
                         b = struct.pack("<H",markers[elements[i]])
                         machine_code.extend(b)
                         continue
-                if ins["params"][i-1] == "reg":
+                elif ins["params"][i-1] == "reg":
                     if not elements[i].startswith("0x"):
                         b = bytes([registers[elements[i]]])
                         machine_code.extend(b)
                         continue
+                if elements[i].startswith("#"):
+                    b = bytes([struct.pack("<H",markers[elements[i][1:]])[0]])
+                    machine_code.extend(b)
+                    continue
+                if elements[i].startswith("*"):
+                    b = bytes([struct.pack("<H",markers[elements[i][1:]])[1]])
+                    machine_code.extend(b)
+                    continue
+
                 if (len(elements[i])-2)/2 != length:
                     print("Error: Argument has wrong length")
                     exit()

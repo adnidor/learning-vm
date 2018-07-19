@@ -129,13 +129,25 @@ void dbg(void) {
     instruction_pointer++;
 }
 
-void prm(void) {
+void prm_old(void) {
     //print character from mem
     instruction_pointer++;
     uint16_t memory_location = *((uint16_t*) &memory[instruction_pointer]);
     printf("prm from: 0x%04x: 0x%02x\n",memory_location,memory[memory_location]);
     putchar(memory[memory_location]);
     instruction_pointer++;
+    instruction_pointer++;
+} 
+
+void prm(void) {
+    //print character from mem
+    instruction_pointer++;
+    uint8_t* high_byte = get_reg(memory[instruction_pointer]);
+    instruction_pointer++;
+    uint8_t* low_byte = get_reg(memory[instruction_pointer]);
+    uint16_t memory_location = *low_byte | (*high_byte << 8);
+    //printf("prm from: 0x%04x: 0x%02x\n",memory_location,memory[memory_location]);
+    putchar(memory[memory_location]);
     instruction_pointer++;
 } 
 
