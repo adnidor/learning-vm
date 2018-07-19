@@ -1,21 +1,78 @@
 #!/usr/bin/python3
 import sys
 import struct
+import yaml
 
-instructions = { "dbg": { "value":0x01, "params":[] },
-                 "dmp": { "value":0x02, "params":[] },
-                 "hlt": { "value":0x03, "params":[] },
-                 "prm": { "value":0x04, "params":["reg","reg"] },
-                 "pr0": { "value":0x05, "params":[] },
-                 "ldc": { "value":0x06, "params":["reg", "byte"] },
-                 "ldy": { "value":0x07, "params":["reg", "reg"] },
-                 "add": { "value":0x08, "params":[] },
-                 "sub": { "value":0x09, "params":[] },
-                 "jmp": { "value":0x0a, "params":["addr"] },
-                 "jlt": { "value":0x0b, "params":["byte","addr"] },
-                 "jgt": { "value":0x0c, "params":["byte","addr"] },
-                 "jeq": { "value":0x0d, "params":["byte","addr"] },
-                 "sto": { "value":0x0e, "params":["reg","addr"] } }
+class IllegalInstructionError(Exception):
+    pass
+
+class IllegalArgumentError(Exception):
+    pass
+
+class Instruction():
+    def __init__(self, expression):
+        try:
+            self.expression = expression
+            self.ins = instructions[expression]
+            self.value = self.ins['instruction']
+            self.params = self.ins['parameters']
+        except NameError as e:
+            raise IllegalInstructionError("Instruction {} not found".format(repr(expression)))
+
+    def __bytes__(self):
+        return bytes([self.value]) 
+
+    def __repr__(self):
+        return "Instruction({})".format(repr(self.expression))
+
+class Parameter():
+    def __init__(self,type,value):
+        if type not in ["byte","addr","reg"]:
+            raise ValueError("Invalid parameter type: {}".format(type))
+        self.type = type
+        self.invalue = value
+
+        if self.type == "byte":
+            self.length = 1
+            if self.invalue.startswith("0x"):
+                self.value = bytes.fromhex(self.invalue[2:])
+            elif self.invalue.startswith("+"): #low addr byte
+                self.value = bytes([struct.pack("<H",labels[self.invalue[1:]])[0]])
+            elif self.invalue.startswith("*"): #high addr byte
+                self.value = bytes([struct.pack("<H",labels[self.invalue[1:]])[1]])
+            else:
+                raise IllegalArgumentError("Invalid Argument: {}".format(repr(self.invalue)))
+
+        elif self.type == "addr":
+            self.length = 2
+            if self.invalue.startswith("0x"):
+                self.value = bytes.fromhex(self.invalue[2:])
+            else:
+                self.value = struct.pack("<H",labels[self.invalue])
+
+        elif self.type == "reg":
+            self.length = 1
+            if self.invalue.startswith("0x"):
+                self.value = bytes.fromhex(self.invalue[2:])
+            else:
+                self.value = bytes([registers[self.invalue]])
+
+        if len(self.value) != self.length:
+            raise IllegalArgumentError("Wrong length, expected {} but got {}".format(self.length,len(self.value)))
+
+    def __bytes__(self):
+        return self.value
+
+    def __repr__(self):
+        return "Parameter({},{})".format(repr(self.type),repr(self.value))
+
+IS_FILE = "instructionset.yml"
+COMMENT_MARKER = "#"
+
+instructions = {}
+
+for element in yaml.load(open(IS_FILE)):
+    instructions[element['mnemonic']] = element
 
 registers = { "reg0": 0x00,
               "reg1": 0x01,
@@ -28,55 +85,45 @@ registers = { "reg0": 0x00,
               "reg8": 0x08,
               "reg9": 0x09 }
 
-markers = {}
+labels = {}
 
 infile = sys.stdin
 outfile = open(1, "wb")
 
 machine_code = bytearray()
 
-no_output = False
-
-for line in infile:
+for linenumber, line in enumerate(infile):
     line = line.strip()
+
+    if len(line) == 0:
+        continue
+
+    if line.startswith(COMMENT_MARKER):
+        continue
+
+    if line[-1] == ":": #ends with ':'
+        labels[line[:-1]] = len(machine_code)
+        continue
+
     elements = line.split()
+
     if elements[0].startswith("0x"):
         for element in elements:
             b = bytes.fromhex(element[2:])
-            if not no_output:
-                machine_code.extend(b)
-    elif line[-1] == ":":
-        markers[line[:-1]] = len(machine_code)
-    else:
-        ins = instructions[elements[0]]
-        machine_code.extend(bytes([ins["value"]]))
-        if len(ins["params"]) > 0:
-            for i in range(1,len(ins["params"])+1):
-                length = 1
-                if ins["params"][i-1] == "addr":
-                    length = 2
-                    if not elements[i].startswith("0x"):
-                        b = struct.pack("<H",markers[elements[i]])
-                        machine_code.extend(b)
-                        continue
-                elif ins["params"][i-1] == "reg":
-                    if not elements[i].startswith("0x"):
-                        b = bytes([registers[elements[i]]])
-                        machine_code.extend(b)
-                        continue
-                if elements[i].startswith("#"):
-                    b = bytes([struct.pack("<H",markers[elements[i][1:]])[0]])
-                    machine_code.extend(b)
-                    continue
-                if elements[i].startswith("*"):
-                    b = bytes([struct.pack("<H",markers[elements[i][1:]])[1]])
-                    machine_code.extend(b)
-                    continue
+            machine_code.extend(b)
 
-                if (len(elements[i])-2)/2 != length:
-                    print("Error: Argument has wrong length")
-                    exit()
-                b = bytes.fromhex(elements[i][2:])[0:length]
-                machine_code.extend(b)
+    else:
+        ins = Instruction(elements[0])
+        machine_code.extend(bytes(ins))
+
+        for i,element in enumerate(elements[1:]):
+            if element.startswith(COMMENT_MARKER):
+                break
+
+            if len(ins.params) < i-1:
+                raise IllegalArgumentException("Too many arguments")
+            
+            param = Parameter(ins.params[i],element)
+            machine_code.extend(bytes(param))
 
 outfile.write(machine_code)

@@ -1,0 +1,83 @@
+- mnemonic: dbg
+  instruction: 0x01
+  parameters: []
+  name: debug
+  description: Output the values of all registers + pointers
+
+- mnemonic: dmp
+  name: dump
+  description: Dump the current memory contents
+  instruction: 0x02
+  parameters: []
+
+- mnemonic: hlt
+  name: halt
+  description: Halt execution normally
+  instruction: 0x03
+  parameters: []
+
+- mnemonic: prm
+  name: print memory
+  description: Print character in memory at address found in the specified registers
+  instruction: 0x04
+  parameters: ["reg","reg"]
+
+- mnemonic: pr0
+  name: print reg0
+  description: Print character currently in reg0
+  instruction: 0x05
+  parameters: []
+
+- mnemonic: ldc
+  name: load constant
+  description: load specified value in specified register
+  instruction: 0x06
+  parameters: ["reg","byte"]
+
+- mnemonic: ldy
+  name: load dynamic
+  description: Load value from the memory address found in the first specified reg in the second spaciefied reg
+  instruction: 0x07
+  parameters: ["reg","reg"]
+
+- mnemonic: add
+  name: add
+  description: Add reg0 and reg1, store in reg0
+  instruction: 0x08
+  parameters: []
+
+- mnemonic: sub
+  name: subtract
+  description: Subtract reg1 from reg0, store in reg0
+  instruction: 0x09
+  parameters: []
+
+- mnemonic: jmp
+  name: jump
+  description: Jump to the specified address
+  instruction: 0x0a
+  parameters: ["addr"]
+
+- mnemonic: jlt
+  name: Jump if less than
+  description: Jump to the specified address if reg0 is less than the parameter
+  instruction: 0x0b
+  parameters: ["byte","addr"]
+
+- mnemonic: jgt
+  name: Jump if greater than
+  description: Jump to the specified address if reg0 is greater than the parameter
+  instruction: 0x0c
+  parameters: ["byte","addr"]
+
+- mnemonic: jeq
+  name: Jump if equal
+  description: Jump to the specified address if reg0 is equal to the parameter
+  instruction: 0x0d
+  parameters: ["byte","addr"]
+
+- mnemonic: sto
+  name: store
+  description: store value in specified register in memory at specified address
+  instruction: 0x0e
+  parameters: ["reg","addr"]
